@@ -36,13 +36,13 @@ class PointCloudVisualizer:
         gen = point_cloud2.read_points(data, field_names=("x", "y", "z"), skip_nans=True)
         self.points = np.round(np.array(list(gen)), 2)
         #print("self.points shape:",self.points.shape)
-        if len(self.points) > 0:
-            self.transformed_points = self.apply_rpy_transformation(self.points)
         
         processing_time = time.time() - start_time
+        
         # Filter points for right (x=0.1) and left (x=-0.1)
         self.points = self.points[(self.points[:, 0] == 0.1) | (self.points[:, 0] == -0.1)]
-
+        if len(self.points) > 0:
+            self.transformed_points = self.apply_rpy_transformation(self.points)
             
         #print('Right points:', len(self.r_points), 'Left points:', len(self.l_points))
         print("Processing time: {:.6f} sec".format(processing_time))
@@ -52,7 +52,7 @@ class PointCloudVisualizer:
         
     def apply_rpy_transformation(self, points):
         # Create rotation matrices for roll, pitch, and yaw
-        self.alpha=np.radians(-90-self.pitch)
+        self.alpha=np.radians(self.pitch+90)
         self.phi = np.radians(self.roll)
         #print("phi_radien:",self.phi)
         #print("phi_angle",self.roll)
@@ -71,7 +71,7 @@ class PointCloudVisualizer:
         ])
 
         # Combine the rotation matrices into a single transformation matrix
-        rotation_matrix =roll_matrix
+        rotation_matrix =roll_matrix @ pitch_matrix
         #print("rotation_matrix shape:",rotation_matrix.shape)
         #print("points shape:",points.shape)
         # Apply the transformation to each point in the point cloud
@@ -97,14 +97,11 @@ class PointCloudVisualizer:
             PointField('y', 4, PointField.FLOAT32, 1),
             PointField('z', 8, PointField.FLOAT32, 1)
         ]
-        #if len(self.transformed_points) > 0:
-            #cloud_msg = point_cloud2.create_cloud(header, fields, self.transformed_points)
-            #self.publisher_r.publish(cloud_msg)
-            
-        # Publish right points to /filtered_points_r
-        if len(self.points) > 0:
-            cloud_msg = point_cloud2.create_cloud(header, fields, self.points)
+        if len(self.transformed_points) > 0:
+            cloud_msg = point_cloud2.create_cloud(header, fields, self.transformed_points)
             self.publisher.publish(cloud_msg)
+            
+
 
 
 
